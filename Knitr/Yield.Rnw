@@ -1,0 +1,78 @@
+\documentclass[12pt, a4paper, oneside]{article} % Paper size, default font size and one-sided paper
+%\graphicspath{{./Figures/}} % Specifies the directory where pictures are stored
+%\usepackage[dcucite]{harvard}
+\usepackage{amsmath}
+\usepackage{setspace}
+\usepackage{pdflscape}
+\usepackage{rotating}
+\usepackage[flushleft]{threeparttable}
+\usepackage{multirow}
+\usepackage[comma, sort&compress]{natbib}% Use the natbib reference package - read up on this to edit the reference style; if you want text (e.g. Smith et al., 2012) for the in-text references (instead of numbers), remove 'numbers' 
+\usepackage{graphicx}
+%\bibliographystyle{plainnat}
+\bibliographystyle{agsm}
+\usepackage[colorlinks = true, citecolor = blue, linkcolor = blue]{hyperref}
+%\hypersetup{urlcolor=blue, colorlinks=true} % Colors hyperlinks in blue - change to black if annoying
+%\renewcommand[\harvardurl]{URL: \url}
+\begin{document}
+\title{Yield Curve Modeling}
+\author{Rob Hayward}
+\date{\today}
+\maketitle
+This comes from \href{http://blog.revolutionanalytics.com/2014/07/quantitative-finance-applications-in-r-7-constructing-a-term-structure-of-interest-rates-using-r-par.html}{Yield Curve Modeling}
+
+This based on the simple model that the return to a security evolves acording to the mechanics of \emph{Brownian motion}
+
+\begin{equation}
+\mu \Delta t + \sigma Z \sqrt{\delta t}
+\end{equation}
+
+Where $\mu$ is the mean annual return of the security (also called the drift), $\sigma$ is the annualised volatility (standard deviation), Z is a standard Normal random variable which introduces the stochastic element. Time is measured in units of years (t).  Therefore a quarter is $t/4$.  
+
+To generate a simulated distribution of quarterly returns when $\mu = 10\%$ and $\sigma = 15\%$ 
+
+<<returns, fig.height=5>>=
+n <- 10000
+set.seed(106)
+z <- rnorm(n)
+mu <- 0.1
+sd <- 0.15
+delta_t <- 0.25
+qrt_returns <- mu*delta_t + sd*z*sqrt(delta_t)
+hist(qrt_returns, breaks = 100, col = "green")
+stats <- c(mean(qrt_returns)*4, sd(qrt_returns) *2)
+names(stats) <- c("mean", "volatility")
+stats
+@
+This is close to the assumption that the return was 10\% and the volatility 15\%. 
+Now it is necessary to take the dates for the yeild curve. 
+
+<<yeidlcurve, warning=FALSE, message=FALSE, tidy=TRUE>>=
+require(lubridate)
+require(xts)
+require(lubridate)
+require(xts)
+ad <- ymd(20140514, tz = "UTC")
+marketDates <- c(ad, ad + days(1), ad + weeks(1), ad + months(1), 
+                 ad + months(2), ad + months(3), ad + months(6), 
+                 ad + months(9), ad +years(1), ad = years(2), 
+                 ad + years(3), ad + years(5), ad + years(7), 
+                 ad + years(10), ad + years(15), ad + years(20), 
+                 ad + years(25), ad + years(30))
+# use substring() to get rid of the time zone. 
+marketDates <- as.Date(substring(marketDates, 1, 10))
+marketRates <- c(0.0, 0.08, 0.125, 0.15, 0.20, 0.255, 0.35, 0.55, 
+                 1.65, 2.25, 2.85, 3.10, 3.35, 3.65, 3.95, 4.65, 
+                 5.15, 5.85) * 0.01
+marketData.xts <- as.xts(marketRates, order.by = marketDates)
+head(marketData.xts)
+@
+Now plot the datae
+<<plot,fig.height=5>>=
+colnames(marketData.xts) <- "ZeroRate"
+plot(x = marketData.xts[, "ZeroRate"], xlab = "Time", ylab = "Zero Rate",
+            main = "Market Zero Rates 2014-05-14", ylim = c(0.0, 0.06),
+            major.ticks= "years", minor.ticks = FALSE, col = "red")
+@
+
+\end{document}
